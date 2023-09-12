@@ -92,7 +92,7 @@
                 }
                 else {
                     data = PhotoburnHelpers.end(true, data);
-                    startSpeedUp = false // this should be removed and bug fixed
+                    startSpeedUp = false // TODO: This should be removed and bug fixed
                 }
                 data.renderer.render(data.scene, data.camera);
             }
