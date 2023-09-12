@@ -1,2 +1,3 @@
-# Kalem Edlin Portfolio Web App
-My Portfolio Website Codebase built with Svelte and Sass CSS
+# Kalem Edlin Portfolio Static Site
+
+My Portfolio Website Codebase built with Svelte, three.js and Sass CSS
