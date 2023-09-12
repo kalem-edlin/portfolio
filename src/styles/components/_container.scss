@@ -1,0 +1,15 @@
+@use '../global/breakpoints' as b;
+
+.container {
+    min-height: calc(80vh - 70px);
+    //Responsive
+    @include b.m-screen {
+        min-height: calc(40vh - 70px);
+    }
+    @include b.s-screen {
+        min-height: calc(40vh - 70px);
+    }
+    @include b.xs-screen {
+        min-height: calc(30vh - 70px);
+    }
+}
