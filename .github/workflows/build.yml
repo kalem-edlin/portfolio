@@ -24,9 +24,4 @@ jobs:
       - name: Build
         run: npm run build
       - name: Test
-        run: npm test 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          name: "dist"
-          path: ./dist
+        run: npm test
