@@ -43,7 +43,7 @@
                 if (scrollY !== 0) {
                     speedingUp = false;
                     startScrollAnimationIfNeeded(
-                        Math.min(scrollY / data.sizes.height, 1)
+                        Math.min(scrollY / data.renderer.domElement.height, 1)
                     );
                 }
             } else {
@@ -96,7 +96,7 @@
                     } else {
                         targetProgress = undefined;
                         data.progress = Math.min(
-                            scrollY / data.sizes.height,
+                            scrollY / data.renderer.domElement.height,
                             1
                         );
                     }
@@ -121,22 +121,16 @@
     };
 
     // Rerender on window resize to keep a consistent canvas visual
-    const onResize = () => {
-        console.log(window.innerWidth);
-        let { renderer, camera, sizes } = PhotoburnHelpers.update(
-            window.innerWidth,
-            window.innerHeight,
-            data.camera,
-            data.renderer
-        );
-        renderer.render(data.scene, camera);
-        data = {
-            ...data,
-            renderer,
-            camera,
-            sizes
-        };
-    };
+    const onResize = PhotoburnHelpers.debounce(() => {
+        let aspect = window.innerWidth / data.renderer.domElement.height
+        console.log("aspect " + aspect )
+        let {renderer, camera} = PhotoburnHelpers.update({ ...data }, window.innerWidth);
+        let {foregroundPlane, backgroundPlane, characterPlane} = data
+        foregroundPlane = PhotoburnHelpers.updatePlane(foregroundPlane, window.innerWidth, aspect)
+        backgroundPlane = PhotoburnHelpers.updatePlane(backgroundPlane, window.innerWidth, aspect)
+        characterPlane = PhotoburnHelpers.updatePlane(characterPlane, window.innerWidth, aspect)
+        renderer.render(data.scene, camera)
+    }, 50);
 
     document.addEventListener('scroll', onScroll);
     window.addEventListener('resize', onResize);
@@ -158,7 +152,7 @@
 <div
     class="container photoburn_container"
     style={`pointer-events: ${
-        scrollY >= data?.sizes.height / 2 ? 'none' : 'auto'
+        scrollY >= data?.renderer.domElement.height / 2 ? 'none' : 'auto'
     }`}
 >
     <div on:mousemove={onMouseMove} id="photoburn-canvas" />
