@@ -4,7 +4,7 @@
 
 <main>
     <Photoburn />
-    <div class="conatiner main_container">
+    <div class="container main_container">
         <div />
         <div class="information_container">
             <h1>Kalem Edlin</h1>
@@ -31,6 +31,7 @@
 </main>
 
 <style lang="scss">
+    @use './styles' as b;
     .main_container {
         z-index: 0;
         scroll-behavior: smooth;
@@ -38,20 +39,15 @@
         div {
             height: 100vh;
             width: 100vw;
-            background-color: --background;
-        }
-
-        :last-child {
-            background-color: --background;
+            
         }
 
         .information_container {
-            margin-top: -6rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-
+            
             .links_container {
                 height: 5rem;
                 display: flex;
@@ -63,11 +59,17 @@
 
             p {
                 width: 30%;
+                @include b.s-screen {
+                    width: 80%;
+                }
                 text-align: center;
             }
 
             h1 {
-                font-size: 4rem;
+                font-size: 3.5rem;
+                @include b.xs-screen {
+                    font-size: 2.5rem;
+                }
                 margin-bottom: 1rem;
             }
         }

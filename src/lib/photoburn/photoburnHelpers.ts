@@ -3,7 +3,7 @@ import mainFragmentShader from './shaders/main.glsl';
 import shared from './shaders/shared.glsl';
 import supportFragmentShader from './shaders/support.glsl';
 import vertexShader from './shaders/vertex.glsl';
-import type { CustomPlane, LayoutChanges, PhotoburnData, Sizes } from './types';
+import type { CustomPlane, LayoutDependants, PhotoburnData } from './types';
 
 export const DURATION = 5000; // The duration of the "burn" transition
 export const SPEED_UP_DURATION = 500; // To Speed up the "burn" for scroll animations
@@ -23,12 +23,10 @@ export const setup = (): PhotoburnData => {
     const height = container.clientHeight;
 
     let camera = new THREE.OrthographicCamera();
-    camera.position.z = 100;
+    camera.position.z = 2;
     let renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    ({renderer, camera} = update({ renderer, camera }, width, height));
     container.appendChild(renderer.domElement);
-    let sizes: Sizes;
-    ({ renderer, camera, sizes } = update(width, height, camera, renderer));
 
     const scene = new THREE.Scene();
     scene.background = null;
@@ -41,7 +39,7 @@ export const setup = (): PhotoburnData => {
         imageTextures.push(imageTexture);
     });
 
-    geometry = new THREE.PlaneGeometry(width, height, 1, 1);
+    geometry = new THREE.PlaneGeometry(renderer.domElement.width, renderer.domElement.height, 1, 1);
 
     THREE.ShaderChunk['shared'] = shared;
 
@@ -65,8 +63,10 @@ export const setup = (): PhotoburnData => {
     const foregroundPlane = new THREE.Mesh(geometry, material);
     foregroundPlane.position.z = 0;
     scene.add(foregroundPlane);
-    const backgroundPlane = getMeshFor(imageTextures[1], -1, sizes);
-    const characterPlane = getMeshFor('base.png', 1, sizes);
+    const backgroundPlane = getMeshFor(imageTextures[1], -1, renderer);
+    const characterPlane = getMeshFor('base.png', 1, renderer);
+
+    const planes = { foregroundPlane, backgroundPlane, characterPlane }
 
     return {
         renderer,
@@ -76,23 +76,22 @@ export const setup = (): PhotoburnData => {
         backgroundPlane,
         characterPlane,
         imageTextures,
-        sizes,
         mouseTrail: [],
         progress: undefined
-    };
+    }
 };
 
 // Will use the support fragment shader to load a texture, ensuring a consistent letterbox with the foreground plane for seamless transitions
 const getMeshFor = (
     imageUrl: string,
     zPosition: number,
-    sizes: Sizes
+    renderer: THREE.WebGLRenderer
 ): CustomPlane => {
     const foregroundMaterial = new THREE.ShaderMaterial({
         transparent: true,
         uniforms: {
             u_texture: { value: new THREE.TextureLoader().load(imageUrl) },
-            u_aspect: { value: sizes.width / sizes.height },
+            u_aspect: { value: renderer.domElement.width / renderer.domElement.height },
             u_image_aspect: { value: IMAGE_ASPECT_RATIO }
         },
         vertexShader: vertexShader,
@@ -106,21 +105,26 @@ const getMeshFor = (
 
 // A function to initialize and update the camera and renderer on width or height change
 export const update = (
+    dependants: LayoutDependants,
     width: number,
-    height: number,
-    camera: THREE.OrthographicCamera,
-    renderer: THREE.WebGLRenderer
-): LayoutChanges => {
+    height: number = undefined
+): LayoutDependants => {
+    let { camera, renderer } = dependants
+    height ||= renderer.domElement.height
     camera.left = -width / 2;
     camera.right = width / 2;
     camera.top = height / 2;
     camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
-    let sizes = { width, height };
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    return { renderer, camera, sizes };
+    return { renderer, camera };
 };
+
+export const updatePlane = (plane: CustomPlane, width: number, aspect: number): CustomPlane => {
+    plane.scale.setX(width / plane.geometry.parameters.width)
+    plane.material.uniforms.u_aspect.value = aspect
+    return plane
+}
 
 // Scrap animation persistency and reset shader uniforms while either adding objects or shifting them depending on the state that is ending
 export const end = (
@@ -150,11 +154,6 @@ export const end = (
 
     return {
         ...data,
-        foregroundPlane,
-        backgroundPlane,
-        characterPlane,
-        scene,
-        imageTextures,
         progress: undefined,
         mouseTrail: []
     };
@@ -171,10 +170,6 @@ export const setupScroll = (data: PhotoburnData): PhotoburnData => {
     scene.remove(characterPlane);
     return {
         ...data,
-        foregroundPlane,
-        backgroundPlane,
-        characterPlane,
-        scene,
         progress: 0
     };
 };
