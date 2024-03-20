@@ -7,7 +7,7 @@ import type { CustomPlane, LayoutDependants, PhotoburnData } from './types';
 
 export const DURATION = 5000; // The duration of the "burn" transition
 export const SPEED_UP_DURATION = 500; // To Speed up the "burn" for scroll animations
-export const IMAGES = ['1.png', '2.png', '3.png', '4.png', '5.png']; // Images to "burn"
+export const IMAGES = ['2.png', '3.png', '4.png', '5.png', 'base.png']; // Images to "burn"
 export const MAX_MOUSE_POINTS = 333; // Max mouse inputs for realtime shader manipulation
 export const DEFAULT = new THREE.Vector3(0.5, 0.5, 0.0); // Center position vector
 export const BLOOM_THRESHOLD = 0.8; // TODO: Implement bloom on "burn" effect
@@ -17,7 +17,7 @@ export const IMAGE_ASPECT_RATIO = 1.797; // The image aspect ratio for all "burn
 let geometry;
 
 // Setup the THREE js canvas and initialize all geometries with their respective textures
-export const setup = (): PhotoburnData => {
+export const setup = async (): Promise<PhotoburnData> => {
     const container = document.getElementById('photoburn-canvas');
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -33,11 +33,13 @@ export const setup = (): PhotoburnData => {
 
     let textureLoader = new THREE.TextureLoader();
 
-    let imageTextures = [];
-    IMAGES.forEach((url) => {
-        const imageTexture = textureLoader.load(url);
-        imageTextures.push(imageTexture);
+    const imagePromises: Promise<THREE.Texture>[] = IMAGES.map(url => {
+        return new Promise(resolve => {
+            textureLoader.load(url, resolve);
+        });
     });
+
+    const imageTextures = await Promise.all(imagePromises);
 
     geometry = new THREE.PlaneGeometry(renderer.domElement.width, renderer.domElement.height, 1, 1);
 
@@ -64,9 +66,11 @@ export const setup = (): PhotoburnData => {
     foregroundPlane.position.z = 0;
     scene.add(foregroundPlane);
     const backgroundPlane = getMeshFor(imageTextures[1], -1, renderer);
-    const characterPlane = getMeshFor('base.png', 1, renderer);
+    const characterPlane = getMeshFor(imageTextures[imageTextures.length - 1], 1, renderer);
 
-    const planes = { foregroundPlane, backgroundPlane, characterPlane }
+    imageTextures.pop()
+
+    // const planes = { foregroundPlane, backgroundPlane, characterPlane }
 
     return {
         renderer,
@@ -83,14 +87,14 @@ export const setup = (): PhotoburnData => {
 
 // Will use the support fragment shader to load a texture, ensuring a consistent letterbox with the foreground plane for seamless transitions
 const getMeshFor = (
-    imageUrl: string,
+    texture: THREE.Texture,
     zPosition: number,
     renderer: THREE.WebGLRenderer
 ): CustomPlane => {
     const foregroundMaterial = new THREE.ShaderMaterial({
         transparent: true,
         uniforms: {
-            u_texture: { value: new THREE.TextureLoader().load(imageUrl) },
+            u_texture: { value: texture },
             u_aspect: { value: renderer.domElement.width / renderer.domElement.height },
             u_image_aspect: { value: IMAGE_ASPECT_RATIO }
         },

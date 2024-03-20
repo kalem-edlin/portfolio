@@ -4,6 +4,9 @@
     import * as PhotoburnHelpers from './photoburnHelpers';
     import type { PhotoburnData } from './types';
 
+    export let onLoad;
+    let loading = true;
+
     let data: PhotoburnData; // All necessary data for shader and geometry manipulation
     let scrollY: number; // Observed by shader animations to execute logic as they run
     let startSpeedUp = false; // Signals a speedup of normal "burn" to scroll animations
@@ -113,8 +116,10 @@
         }
     };
 
+    export let onOuterScroll: (y: number) => void;
     const onScroll = () => {
         scrollY = window.scrollY;
+        onOuterScroll(scrollY);
         if (scrollY !== 0) {
             startScrollAnimationIfNeeded();
         }
@@ -122,21 +127,38 @@
 
     // Rerender on window resize to keep a consistent canvas visual
     const onResize = PhotoburnHelpers.debounce(() => {
-        let aspect = window.innerWidth / data.renderer.domElement.height
-        console.log("aspect " + aspect )
-        let {renderer, camera} = PhotoburnHelpers.update({ ...data }, window.innerWidth);
-        let {foregroundPlane, backgroundPlane, characterPlane} = data
-        foregroundPlane = PhotoburnHelpers.updatePlane(foregroundPlane, window.innerWidth, aspect)
-        backgroundPlane = PhotoburnHelpers.updatePlane(backgroundPlane, window.innerWidth, aspect)
-        characterPlane = PhotoburnHelpers.updatePlane(characterPlane, window.innerWidth, aspect)
-        renderer.render(data.scene, camera)
+        let aspect = window.innerWidth / data.renderer.domElement.height;
+        console.log('aspect ' + aspect);
+        let { renderer, camera } = PhotoburnHelpers.update(
+            { ...data },
+            window.innerWidth
+        );
+        let { foregroundPlane, backgroundPlane, characterPlane } = data;
+        foregroundPlane = PhotoburnHelpers.updatePlane(
+            foregroundPlane,
+            window.innerWidth,
+            aspect
+        );
+        backgroundPlane = PhotoburnHelpers.updatePlane(
+            backgroundPlane,
+            window.innerWidth,
+            aspect
+        );
+        characterPlane = PhotoburnHelpers.updatePlane(
+            characterPlane,
+            window.innerWidth,
+            aspect
+        );
+        renderer.render(data.scene, camera);
     }, 50);
 
     document.addEventListener('scroll', onScroll);
     window.addEventListener('resize', onResize);
 
-    onMount(() => {
-        data = PhotoburnHelpers.setup();
+    onMount(async () => {
+        data = await PhotoburnHelpers.setup();
+        onLoad();
+        loading = false;
         scrollY = window.scrollY;
         // If scrolled, set to scroll animation frame and skip the initial "burn" animation
         if (scrollY === 0) {
