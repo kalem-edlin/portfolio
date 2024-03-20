@@ -4,9 +4,10 @@
     let mouseHintShown = false;
     let y = 0;
 
-    setTimeout(() => {
-        mouseHintShown = true;
-    }, 6000);
+    loading &&
+        setTimeout(() => {
+            mouseHintShown = true;
+        }, 6000);
 
     console.log(loading);
 </script>
