@@ -4,7 +4,7 @@
     let mouseHintShown = false;
     let y = 0;
 
-    loading &&
+    $: !loading &&
         setTimeout(() => {
             mouseHintShown = true;
         }, 6000);
