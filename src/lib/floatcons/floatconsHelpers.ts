@@ -5,8 +5,8 @@ import type { Icon, RawIconData, Sizes } from './types';
 import vertexShader from './vertex.glsl';
 
 // Constants for the project
-export const VELOCITY_SIZE = 4;
-export const MAX_VELOCITY_MAGNITUDE = 6;
+export const VELOCITY_SIZE = 2.5;
+export const MAX_VELOCITY_MAGNITUDE = 4;
 export const EDGE_PUSH_MULTIPLIER = 0.35;
 export const CENTER_PUSH_MULTIPLIER = 0.4;
 export const MOUSE_PUSH_MULTIPLIER = 0.2;

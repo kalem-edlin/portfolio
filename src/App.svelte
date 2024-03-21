@@ -310,6 +310,8 @@
         z-index: 99;
         bottom: 4%;
         left: 50%;
+        transform: translate(-50%, 0);
+
         animation: bounce 4s infinite;
         transition: opacity 2s;
     }
@@ -328,6 +330,7 @@
         margin-top: 40vh;
         z-index: 99;
         left: 50%;
+        transform: translate(-50%, 0);
         animation: wave 8s ease-in-out infinite;
     }
 

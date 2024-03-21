@@ -86,7 +86,6 @@
 }px; margin-left: 0%;`} -->
     <div class="container skills-container">
         <h1>The Kalem Stack</h1>
-        <p>I love to create</p>
         <p>
             I have spent years curating a personal stack of technology. This is
             my toolbelt, and with it I feel <span style="font-style: italic;"
@@ -110,7 +109,6 @@
     .skills-container {
         position: absolute;
         z-index: 1;
-        text-align: center;
         width: 100%;
         height: 100%;
         border-radius: 50%;
@@ -129,11 +127,12 @@
         }
 
         h1 {
+            text-align: center;
             font-size: 3.5rem;
             @include b.xs-screen {
                 font-size: 2.5rem;
             }
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
         }
 
         button {
