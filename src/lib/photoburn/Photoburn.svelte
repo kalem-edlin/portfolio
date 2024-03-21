@@ -4,13 +4,20 @@
     import * as PhotoburnHelpers from './photoburnHelpers';
     import type { PhotoburnData } from './types';
 
-    export let onLoad;
-    let loading = true;
+    export let scrollY;
+    export let onLoaded;
+    export let onReadyToScroll;
+    export let onWaved;
+
+    const DRAWABLE_HEIGHT = 0;
 
     let data: PhotoburnData; // All necessary data for shader and geometry manipulation
-    let scrollY: number; // Observed by shader animations to execute logic as they run
     let startSpeedUp = false; // Signals a speedup of normal "burn" to scroll animations
     let speedingUp = false; // Indicates a speedup is currently underway
+    let isInitialAnimation = false;
+
+    let animateStateFunction: () => void | undefined;
+    $: animateStateFunction && console.log(animateStateFunction());
 
     const mouse = new THREE.Vector2(Infinity, Infinity);
 
@@ -18,16 +25,16 @@
     const startAnimation = (initialAnimation: boolean) => {
         let startTime = undefined;
         let animationDuration = PhotoburnHelpers.DURATION;
-        function transitionAnimation(timestamp) {
+        !isInitialAnimation && onWaved();
+        const transitionAnimation = PhotoburnHelpers.debounce((timestamp) => {
             if (!startTime) startTime = timestamp;
 
-            if (scrollY !== 0 && startSpeedUp) {
+            if (scrollY > DRAWABLE_HEIGHT && startSpeedUp) {
                 speedingUp = true;
                 animationDuration = PhotoburnHelpers.SPEED_UP_DURATION;
                 startTime = timestamp - data.progress * animationDuration;
                 startSpeedUp = false;
             }
-
             data.progress = (timestamp - startTime) / animationDuration;
 
             // For most animations, accept mouse points into the "burn" tracking by encoding them as a buffer array for dynamic realtime manipulation
@@ -41,90 +48,97 @@
 
             // TODO: If foreground completely invisible, end animation
             if (data.progress >= 1) {
+                speedingUp = false;
+                isInitialAnimation && onReadyToScroll();
+                isInitialAnimation = false;
                 data = PhotoburnHelpers.end(initialAnimation, data);
-                // If scrollY is 0, assume speedup complete and execute scroll animation
-                if (scrollY !== 0) {
-                    speedingUp = false;
+                animateStateFunction = () =>
                     startScrollAnimationIfNeeded(
                         Math.min(scrollY / data.renderer.domElement.height, 1)
                     );
-                }
             } else {
                 requestAnimationFrame(transitionAnimation);
             }
             data.renderer.render(data.scene, data.camera);
-        }
+        }, 5);
         requestAnimationFrame(transitionAnimation);
     };
 
     // Debounced to mitigate the amount of points that are added given the limits GLSL imposes
     const onMouseMove = PhotoburnHelpers.debounce((event) => {
+        if (isInitialAnimation) return;
+
         const target = event.target;
         mouse.x = event.pageX / target.clientWidth;
         mouse.y = 1 - event.pageY / target.clientHeight;
 
         if (
             data.mouseTrail.length < PhotoburnHelpers.MAX_MOUSE_POINTS &&
-            scrollY === 0
+            scrollY <= DRAWABLE_HEIGHT
         ) {
             data.mouseTrail.push(
                 new THREE.Vector3(mouse.x, mouse.y, data.progress)
             );
             // Progress is set to undefined to indicate no animation (normal + scroll) playing
-            if (data.progress === undefined) {
-                startAnimation(false);
+            if (!animateStateFunction) {
+                // Suspicious that svelte's component state cannot keep up with mouse updates. Employing a state function that only runs on state change (hypothetically just as fast as svelte can manage it)
+                animateStateFunction = () => startAnimation(false);
             }
         }
     }, 5);
 
     // Another important feature that animates the shader noise "burn" to follow the scroll in order to reveal additional site content. Takes an optional targetProgress to tell the scroll animation where to try and gradually catch up to
-    const startScrollAnimationIfNeeded = (
+    const startScrollAnimationIfNeeded = async (
         targetProgress: number | undefined = undefined
     ) => {
-        if (startSpeedUp) return;
-        if (speedingUp) return;
-        if (data.progress !== undefined) {
+        data = PhotoburnHelpers.setupScroll(data);
+        let startTime;
+        const scrollAnimation = PhotoburnHelpers.debounce((timestamp) => {
+            if (scrollY > DRAWABLE_HEIGHT) {
+                if (!startTime) startTime = timestamp;
+                // Catchup to scroll position after finishing the normal "burn" animation if targetProgress is set
+
+                console.log(targetProgress);
+                if (data.progress < targetProgress) {
+                    data.progress = Math.min(
+                        (timestamp - startTime) /
+                            (PhotoburnHelpers.SPEED_UP_DURATION /
+                                targetProgress),
+                        1
+                    );
+                } else {
+                    targetProgress = undefined;
+                    data.progress = Math.min(
+                        scrollY / data.renderer.domElement.height,
+                        1
+                    );
+                }
+                data.foregroundPlane.material.uniforms.u_time.value =
+                    data.progress;
+                requestAnimationFrame(scrollAnimation);
+            } else {
+                data = PhotoburnHelpers.end(true, data);
+                // startSpeedUp = false; // TODO: This should be removed and bug fixed
+                animateStateFunction = undefined;
+            }
+            data.renderer.render(data.scene, data.camera);
+        }, 15);
+        requestAnimationFrame(scrollAnimation);
+    };
+
+    $: if (scrollY > DRAWABLE_HEIGHT) {
+        if (animateStateFunction) {
             startSpeedUp = true;
         } else {
-            data = PhotoburnHelpers.setupScroll(data);
-            let startTime;
-            function scrollAnimation(timestamp) {
-                if (scrollY !== 0) {
-                    if (!startTime) startTime = timestamp;
-                    // Catchup to scroll position after finishing the normal "burn" animation if targetProgress is set
-                    if (data.progress < targetProgress) {
-                        data.progress =
-                            (timestamp - startTime) /
-                            PhotoburnHelpers.SPEED_UP_DURATION;
-                    } else {
-                        targetProgress = undefined;
-                        data.progress = Math.min(
-                            scrollY / data.renderer.domElement.height,
-                            1
-                        );
-                    }
-                    data.foregroundPlane.material.uniforms.u_time.value =
-                        data.progress;
-                    requestAnimationFrame(scrollAnimation);
-                } else {
-                    data = PhotoburnHelpers.end(true, data);
-                    startSpeedUp = false; // TODO: This should be removed and bug fixed
-                }
-                data.renderer.render(data.scene, data.camera);
-            }
-            requestAnimationFrame(scrollAnimation);
+            if (!speedingUp)
+                animateStateFunction = () => startScrollAnimationIfNeeded();
         }
-    };
+    } else {
+        if (isInitialAnimation)
+            animateStateFunction = () => startAnimation(true);
+    }
 
-    export let onOuterScroll: (y: number) => void;
-    const onScroll = () => {
-        scrollY = window.scrollY;
-        onOuterScroll(scrollY);
-        if (scrollY !== 0) {
-            startScrollAnimationIfNeeded();
-        }
-    };
-
+    // TODO: Statically use current image over screen and reload all textures in background
     // Rerender on window resize to keep a consistent canvas visual
     const onResize = PhotoburnHelpers.debounce(() => {
         let aspect = window.innerWidth / data.renderer.domElement.height;
@@ -152,20 +166,20 @@
         renderer.render(data.scene, camera);
     }, 50);
 
-    document.addEventListener('scroll', onScroll);
     window.addEventListener('resize', onResize);
 
     onMount(async () => {
-        data = await PhotoburnHelpers.setup();
-        onLoad();
-        loading = false;
+        isInitialAnimation = true;
+        if (!data) {
+            data = await PhotoburnHelpers.setup();
+        }
+        await onLoaded();
         scrollY = window.scrollY;
         // If scrolled, set to scroll animation frame and skip the initial "burn" animation
-        if (scrollY === 0) {
-            startAnimation(true);
+        if (scrollY <= DRAWABLE_HEIGHT) {
+            animateStateFunction = () => startAnimation(true);
         } else {
-            data.foregroundPlane.material.uniforms.u_first.value = false;
-            startScrollAnimationIfNeeded();
+            onReadyToScroll();
         }
     });
 </script>

@@ -25,7 +25,7 @@ export const setup = async (): Promise<PhotoburnData> => {
     let camera = new THREE.OrthographicCamera();
     camera.position.z = 2;
     let renderer = new THREE.WebGLRenderer({ alpha: true });
-    ({renderer, camera} = update({ renderer, camera }, width, height));
+    ({ renderer, camera } = update({ renderer, camera }, width, height));
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -33,15 +33,20 @@ export const setup = async (): Promise<PhotoburnData> => {
 
     let textureLoader = new THREE.TextureLoader();
 
-    const imagePromises: Promise<THREE.Texture>[] = IMAGES.map(url => {
-        return new Promise(resolve => {
+    const imagePromises: Promise<THREE.Texture>[] = IMAGES.map((url) => {
+        return new Promise((resolve) => {
             textureLoader.load(url, resolve);
         });
     });
 
     const imageTextures = await Promise.all(imagePromises);
 
-    geometry = new THREE.PlaneGeometry(renderer.domElement.width, renderer.domElement.height, 1, 1);
+    geometry = new THREE.PlaneGeometry(
+        renderer.domElement.width,
+        renderer.domElement.height,
+        1,
+        1
+    );
 
     THREE.ShaderChunk['shared'] = shared;
 
@@ -66,9 +71,13 @@ export const setup = async (): Promise<PhotoburnData> => {
     foregroundPlane.position.z = 0;
     scene.add(foregroundPlane);
     const backgroundPlane = getMeshFor(imageTextures[1], -1, renderer);
-    const characterPlane = getMeshFor(imageTextures[imageTextures.length - 1], 1, renderer);
+    const characterPlane = getMeshFor(
+        imageTextures[imageTextures.length - 1],
+        1,
+        renderer
+    );
 
-    imageTextures.pop()
+    imageTextures.pop();
 
     // const planes = { foregroundPlane, backgroundPlane, characterPlane }
 
@@ -82,7 +91,7 @@ export const setup = async (): Promise<PhotoburnData> => {
         imageTextures,
         mouseTrail: [],
         progress: undefined
-    }
+    };
 };
 
 // Will use the support fragment shader to load a texture, ensuring a consistent letterbox with the foreground plane for seamless transitions
@@ -95,7 +104,9 @@ const getMeshFor = (
         transparent: true,
         uniforms: {
             u_texture: { value: texture },
-            u_aspect: { value: renderer.domElement.width / renderer.domElement.height },
+            u_aspect: {
+                value: renderer.domElement.width / renderer.domElement.height
+            },
             u_image_aspect: { value: IMAGE_ASPECT_RATIO }
         },
         vertexShader: vertexShader,
@@ -113,8 +124,8 @@ export const update = (
     width: number,
     height: number = undefined
 ): LayoutDependants => {
-    let { camera, renderer } = dependants
-    height ||= renderer.domElement.height
+    let { camera, renderer } = dependants;
+    height ||= renderer.domElement.height;
     camera.left = -width / 2;
     camera.right = width / 2;
     camera.top = height / 2;
@@ -124,11 +135,15 @@ export const update = (
     return { renderer, camera };
 };
 
-export const updatePlane = (plane: CustomPlane, width: number, aspect: number): CustomPlane => {
-    plane.scale.setX(width / plane.geometry.parameters.width)
-    plane.material.uniforms.u_aspect.value = aspect
-    return plane
-}
+export const updatePlane = (
+    plane: CustomPlane,
+    width: number,
+    aspect: number
+): CustomPlane => {
+    plane.scale.setX(width / plane.geometry.parameters.width);
+    plane.material.uniforms.u_aspect.value = aspect;
+    return plane;
+};
 
 // Scrap animation persistency and reset shader uniforms while either adding objects or shifting them depending on the state that is ending
 export const end = (
@@ -167,7 +182,7 @@ export const end = (
 export const setupScroll = (data: PhotoburnData): PhotoburnData => {
     let { foregroundPlane, backgroundPlane, characterPlane, scene } = data;
     foregroundPlane.material.uniforms.u_mouse_data.value = encodeMouseData([
-        new THREE.Vector3(0.5, -0.08)
+        new THREE.Vector3(0.5, -0.05)
     ]);
     foregroundPlane.material.uniforms.u_num_mouse_data.value = 1;
     scene.remove(backgroundPlane);

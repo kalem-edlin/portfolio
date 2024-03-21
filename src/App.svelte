@@ -1,15 +1,61 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import Floatcons from './lib/floatcons/Floatcons.svelte';
     import Photoburn from './lib/photoburn/Photoburn.svelte';
+
     let loading = true;
-    let mouseHintShown = false;
+    let showMouseScroll = false;
+    let showMouseWave = false;
+    let floatConsTop: undefined | number;
+
     let y = 0;
+    let readyToScroll = false;
 
-    $: !loading &&
+    $: floatConsTop = y > window.innerHeight ? window.innerHeight : undefined;
+
+    $: floatConsTop && console.log(floatConsTop);
+
+    $: showMouseScroll = showMouseScroll && y == 0;
+
+    window.addEventListener('scroll', () => {
+        if (readyToScroll) {
+            y = window.scrollY;
+        } else {
+            window.scrollTo(0, 0);
+        }
+    });
+
+    const onLoaded = async () => {
+        await new Promise<void>((resolve) => {
+            setTimeout(() => {
+                resolve();
+            }, 1000);
+        });
         setTimeout(() => {
-            mouseHintShown = true;
-        }, 6000);
+            showMouseWave = y == 0;
+            setTimeout(() => {
+                showMouseWave = false;
+            }, 8000);
+        }, 4000);
+        loading = false;
+    };
 
-    console.log(loading);
+    const onReadyToScroll = async () => {
+        readyToScroll = true;
+    };
+
+    const onWaved = async () => {
+        showMouseWave = false;
+        setTimeout(() => {
+            showMouseScroll = y == 0;
+        }, 2000);
+    };
+
+    onMount(() => {
+        console.log('mounted');
+        loading = true;
+        // y = window.screenY;
+    });
 </script>
 
 <main>
@@ -17,8 +63,35 @@
         <img class="logo" src="logo.gif" alt="kalem edlin logo" />
     </div>
 
-    {#if mouseHintShown}
-        <div class={`mouse_hint_container ${y > 0 && 'mouse_hint_hide'}`}>
+    <div
+        class={`mouse_wave_container ${
+            showMouseWave ? `mouse_wave_container_show` : `mouse_hide`
+        }`}
+    >
+        <svg
+            width="197"
+            height="296"
+            viewBox="0 0 197 296"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M196.56 196.704V98.352C196.56 44.2584 152.334 0 98.28 0C44.226 0 0 44.2584 0 98.352V196.704C0 250.798 44.226 295.056 98.28 295.056C152.334 295.056 196.56 250.798 196.56 196.704ZM98.28 273.2C56.238 273.2 21.84 238.777 21.84 196.704V98.352C21.84 56.2792 56.238 21.856 98.28 21.856C140.322 21.856 174.72 56.2792 174.72 98.352V196.704C174.72 238.777 140.322 273.2 98.28 273.2Z"
+                fill="currentColor"
+            />
+            <path
+                d="M98.2803 60.104C92.2743 60.104 87.3604 65.0216 87.3604 71.032V103.816C87.3604 109.826 92.2743 114.744 98.2803 114.744C104.286 114.744 109.2 109.826 109.2 103.816V71.032C109.2 65.0216 104.286 60.104 98.2803 60.104Z"
+                fill="currentColor"
+            />
+        </svg>
+    </div>
+
+    {#if showMouseScroll}
+        <div
+            class={`mouse_hint_container ${
+                y > 0 ? `mouse_wave_container_show` : `mouse_hide`
+            }`}
+        >
             <svg
                 width="197"
                 height="449"
@@ -46,19 +119,28 @@
             </svg>
         </div>
     {/if}
-    <Photoburn
-        onLoad={() => {
-            loading = false;
-        }}
-        onOuterScroll={(newY) => {
-            y = newY;
-        }}
-    />
+    <div
+        style={`position: absolute; z-index: 20; pointer-events: none; width: 100%; height: 100%;`}
+    >
+        <Photoburn {onLoaded} {onReadyToScroll} {onWaved} scrollY={y} />
+    </div>
 
-    <div class="container main_container">
+    <div style={`z-index: 0;`} class="container main_container">
+        {#if readyToScroll}
+            <div
+                style={`${
+                    floatConsTop
+                        ? `position: absolute; top: ${floatConsTop}px;`
+                        : `position: fixed; top: ;`
+                } z-index: 10; width: 100vw; height: 100vh;`}
+            >
+                <Floatcons scrollY={y} />
+            </div>
+        {/if}
+        <div />
         <div />
         <div class="information_container">
-            <h1>Kalem Edlin</h1>
+            <img class="logo" src="logo.gif" alt="kalem edlin logo" />
             <p>
                 My brain is hard-wired to solve problems. I have yet to find one
                 that cannot be solved with a plan of attack and a passion to
@@ -85,8 +167,7 @@
     @use './styles' as b;
     .main_container {
         z-index: 0;
-        scroll-behavior: smooth;
-        scroll-snap-type: mandatory;
+        height: 100vh;
         div {
             height: 100vh;
             width: 100vw;
@@ -125,7 +206,7 @@
         }
     }
     .logo_container {
-        position: absolute;
+        position: fixed;
         width: 100vw;
         height: 100vh;
         display: flex;
@@ -137,15 +218,6 @@
 
     .logo_hidden {
         animation: fade-out 1s ease-in forwards;
-    }
-
-    @keyframes fade-in {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
     }
 
     @keyframes fade-out {
@@ -165,28 +237,54 @@
     .mouse_hint_container {
         width: 30px;
         height: 50px;
-        position: absolute;
+        position: fixed;
         display: flex;
         justify-content: center;
         align-items: center;
         filter: drop-shadow(0 0 0.75rem #646cff);
-        opacity: 0;
+        opacity: 1;
         z-index: 99;
         bottom: 4%;
         left: 50%;
-        animation: bounce 6s infinite;
+        animation: bounce 4s infinite;
+        transition: opacity 2s;
+    }
+    .mouse_wave_container {
+        width: 70px;
+        height: 100px;
+        position: fixed;
+        filter: drop-shadow(0 0 0.75rem #646cff);
+        transition: opacity 2s;
+        opacity: 0;
+        z-index: 99;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        margin-top: 40vh;
+        z-index: 99;
+        left: 50%;
+        animation: wave 8s ease-in-out infinite;
     }
 
-    @keyframes mouse-out {
-        from {
-            opacity: 0.5;
-        }
-        to {
-            opacity: 0;
-        }
+    .mouse_wave_container_show {
+        opacity: 0.7;
     }
-    .mouse_hint_hide {
-        animation: mouse-out 2s forwards;
+
+    .mouse_hide {
+        opacity: 0;
+    }
+
+    @keyframes wave {
+        0% {
+            transform: translateX(-20vw) rotate(-10deg);
+        }
+        50% {
+            transform: translateX(20vw) rotate(10deg);
+        }
+        100% {
+            transform: translateX(-20vw) rotate(-10deg);
+        }
     }
 
     @keyframes bounce {
