@@ -4,18 +4,54 @@
     import Photoburn from './lib/photoburn/Photoburn.svelte';
 
     let loading = true;
-    let showMouseScroll = false;
-    let showMouseWave = false;
+    let readyToScroll = false;
+    let startAnimation = false;
+
     let floatConsTop: undefined | number;
 
+    let showMouseScrollInitial = false;
+    let showMouseWaveInitial = false;
+    let showMouseScrollSecond = false;
+    let showMouseWaveSecond = false;
+    let secondWaveShown = false;
+    let waved = false;
+    let disableOverlays = false;
+
     let y = 0;
-    let readyToScroll = false;
 
     $: floatConsTop =
-        y > window.innerHeight * 1.5 ? window.innerHeight : undefined;
+        y > window.innerHeight * 1.5 ? window.innerHeight * 1.5 : undefined;
 
-    $: showMouseScroll = showMouseScroll && y == 0;
-    $: showMouseWave = showMouseWave && y == 0;
+    $: {
+        if (y != 0) {
+            showMouseScrollInitial = false;
+            showMouseWaveInitial = false;
+        }
+    }
+
+    $: {
+        if (y > window.innerHeight && y < window.innerHeight * 1.5) {
+            disableOverlays = false;
+            if (secondWaveShown && !showMouseWaveSecond) {
+                showMouseScrollSecond = true;
+            } else {
+                showMouseWaveSecond = true;
+                secondWaveShown = true;
+                setTimeout(() => {
+                    showMouseWaveSecond = false;
+                    setTimeout(() => {
+                        showMouseScrollSecond = true;
+                    }, 4000);
+                }, 6000);
+            }
+        } else {
+            showMouseScrollSecond = false;
+            showMouseWaveSecond = false;
+            if (y > window.innerHeight * 1.5) {
+                disableOverlays = true;
+            }
+        }
+    }
 
     window.addEventListener('scroll', () => {
         if (readyToScroll) {
@@ -31,23 +67,22 @@
                 resolve();
             }, 1000);
         });
-        setTimeout(() => {
-            showMouseWave = y == 0;
-            setTimeout(() => {
-                showMouseWave = false;
-            }, 8000);
-        }, 4000);
         loading = false;
     };
 
     const onReadyToScroll = async () => {
         readyToScroll = true;
+        setTimeout(() => {
+            showMouseWaveInitial = y == 0 && !waved;
+        }, 3000);
     };
 
     const onWaved = async () => {
-        showMouseWave = false;
+        waved = true;
+        showMouseWaveInitial = false;
+
         setTimeout(() => {
-            showMouseScroll = y == 0;
+            showMouseScrollInitial = y == 0;
         }, 2000);
     };
 
@@ -59,14 +94,30 @@
 </script>
 
 <main>
-    {#if !readyToScroll}
-        <div class={`logo_container ${!loading && 'logo_hidden'}`}>
-            <img class="logo" src="logo.gif" alt="kalem edlin logo" />
-        </div>{/if}
+    {#if !disableOverlays}
+        <button
+            class={`logo_container ${!loading && 'logo_hidden'}`}
+            style="flex-direction: column; background-color: transparent;"
+            on:click={() => (startAnimation = true)}
+        >
+            <img
+                class="logo logo_header"
+                src="logo.gif"
+                alt="kalem edlin logo"
+            />
+            <!-- {#if !loading}
+            <span style="position: absolute; bottom: 5%; font-size: x-large;">
+                Click to continue...
+            </span>
+        {/if} -->
+        </button>
+    {/if}
 
     <div
         class={`mouse_wave_container ${
-            showMouseWave ? `mouse_wave_container_show` : `mouse_hide`
+            showMouseWaveInitial || showMouseWaveSecond
+                ? `mouse_wave_container_show`
+                : `mouse_hide`
         }`}
     >
         <svg
@@ -87,10 +138,12 @@
         </svg>
     </div>
 
-    {#if showMouseScroll}
+    {#if showMouseScrollInitial || showMouseScrollSecond}
         <div
             class={`mouse_hint_container ${
-                y > 0 ? `mouse_wave_container_show` : `mouse_hide`
+                showMouseScrollInitial || showMouseScrollSecond
+                    ? `mouse_wave_container_show`
+                    : `mouse_hide`
             }`}
         >
             <svg
@@ -140,6 +193,7 @@
         {/if}
         <div />
         <div />
+        <div style="height: 50vh;" />
         <div class="information_container">
             <img class="logo" src="logo.gif" alt="kalem edlin logo" />
             <p>
@@ -233,17 +287,26 @@
 
     .logo {
         width: 40%;
+        @include b.s-screen {
+            width: 90%;
+        }
+    }
+
+    .logo_header {
+        @include b.s-screen {
+            transform: rotate(90deg);
+        }
     }
 
     .mouse_hint_container {
-        width: 30px;
-        height: 50px;
+        width: 50px;
+        height: 80px;
         position: fixed;
         display: flex;
         justify-content: center;
         align-items: center;
         filter: drop-shadow(0 0 0.75rem #646cff);
-        opacity: 1;
+        opacity: 0.7;
         z-index: 99;
         bottom: 4%;
         left: 50%;

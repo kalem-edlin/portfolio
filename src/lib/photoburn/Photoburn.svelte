@@ -23,19 +23,23 @@
 
     // The main feature transition animation handler that will use "progress" to "burn" the foreground plane revealing the background plane, whilst taking in new mouse points to add to the burn
     const startAnimation = (initialAnimation: boolean) => {
+        console.log('starting');
         let startTime = undefined;
         let animationDuration = PhotoburnHelpers.DURATION;
         !isInitialAnimation && onWaved();
-        const transitionAnimation = PhotoburnHelpers.debounce((timestamp) => {
+
+        const transitionAnimation = (timestamp) => {
             if (!startTime) startTime = timestamp;
 
             if (scrollY > DRAWABLE_HEIGHT && startSpeedUp) {
+                console.log('speeding up');
                 speedingUp = true;
                 animationDuration = PhotoburnHelpers.SPEED_UP_DURATION;
                 startTime = timestamp - data.progress * animationDuration;
                 startSpeedUp = false;
             }
             data.progress = (timestamp - startTime) / animationDuration;
+            console.log('looping');
 
             // For most animations, accept mouse points into the "burn" tracking by encoding them as a buffer array for dynamic realtime manipulation
             if (!initialAnimation) {
@@ -48,6 +52,7 @@
 
             // TODO: If foreground completely invisible, end animation
             if (data.progress >= 1) {
+                console.log('finishing');
                 speedingUp = false;
                 isInitialAnimation && onReadyToScroll();
                 isInitialAnimation = false;
@@ -60,7 +65,7 @@
                 requestAnimationFrame(transitionAnimation);
             }
             data.renderer.render(data.scene, data.camera);
-        }, 20);
+        };
         requestAnimationFrame(transitionAnimation);
     };
 
@@ -93,20 +98,19 @@
     ) => {
         data = PhotoburnHelpers.setupScroll(data);
         let startTime;
-        const scrollAnimation = PhotoburnHelpers.debounce((timestamp) => {
+        const scrollAnimation = (timestamp) => {
             if (scrollY > DRAWABLE_HEIGHT) {
                 if (!startTime) startTime = timestamp;
+
                 // Catchup to scroll position after finishing the normal "burn" animation if targetProgress is set
-                console.log(targetProgress);
-                const posRatio = scrollY / data.renderer.domElement.height;
                 if (data.progress < targetProgress) {
                     data.progress = Math.min(
                         (timestamp - startTime) /
-                            (PhotoburnHelpers.SPEED_UP_DURATION /
-                                targetProgress),
+                            (PhotoburnHelpers.SPEED_UP_DURATION * 1.5),
                         1
                     );
                 } else {
+                    const posRatio = scrollY / data.renderer.domElement.height;
                     targetProgress = undefined;
                     if (posRatio > 1) {
                         animateStateFunction = undefined;
@@ -124,18 +128,15 @@
                 animateStateFunction = undefined;
             }
             data.renderer.render(data.scene, data.camera);
-        }, 20);
+        };
         requestAnimationFrame(scrollAnimation);
     };
 
-    $: if (
-        scrollY > DRAWABLE_HEIGHT &&
-        scrollY < data.renderer.domElement.height
-    ) {
+    $: if (scrollY > DRAWABLE_HEIGHT && !speedingUp) {
         if (animateStateFunction) {
             startSpeedUp = true;
         } else {
-            if (!speedingUp)
+            if (scrollY < window.innerHeight)
                 animateStateFunction = () => startScrollAnimationIfNeeded();
         }
     } else {

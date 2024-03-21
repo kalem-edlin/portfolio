@@ -99,7 +99,7 @@
                 on:click={() => {
                     wrangling = !wrangling;
                     onFilter('passion');
-                }}>{wrangling ? 'Release' : 'Wrangle'}</button
+                }}>{wrangling ? 'Release' : 'Wrangle Icons'}</button
             >
         </div>
     </div>
@@ -133,7 +133,11 @@
             @include b.xs-screen {
                 font-size: 2.5rem;
             }
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            margin-top: 1rem;
         }
     }
 
