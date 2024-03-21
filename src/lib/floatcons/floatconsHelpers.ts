@@ -8,13 +8,14 @@ import vertexShader from './vertex.glsl';
 export const VELOCITY_SIZE = 4;
 export const MAX_VELOCITY_MAGNITUDE = 6;
 export const EDGE_PUSH_MULTIPLIER = 0.35;
-export const CENTER_PUSH_MULTIPLIER = 0.2;
+export const CENTER_PUSH_MULTIPLIER = 0.4;
 export const MOUSE_PUSH_MULTIPLIER = 0.2;
 export const MOUSE_PUSH_THRESHOLD = 230;
-export const ICON_SCALE = 10;
+export const ICON_SCALE = 8;
+export const MAX_ICON_SIZE = 140;
 export const WORLD_SPACE_SCALE = 2.4;
 export const AVOIDANCE_RADIUS = 2;
-export const AVOIDANCE_STRENGTH = 0.1;
+export const AVOIDANCE_STRENGTH = 1;
 
 export const POST_PROCESSING = {
     threshold: 0.9,
@@ -60,7 +61,14 @@ export const update = (
     camera.top = height / 2;
     camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
-    let sizes = { width, height, icon: width / ICON_SCALE };
+    let sizes = {
+        width,
+        height,
+        icon: Math.min(
+            height > width ? height : width / ICON_SCALE,
+            MAX_ICON_SIZE
+        )
+    };
     renderer.setSize(width, height);
     return { renderer, camera, sizes };
 };
@@ -105,8 +113,8 @@ const applyCenterPush = (
     sizes: Sizes,
     scrollY?: number
 ): THREE.Vector3 => {
-    const maxRadiusX = sizes.width / 3.2;
-    const minRadiusY = sizes.height / 3;
+    const maxRadiusX = sizes.width / 3;
+    const minRadiusY = sizes.height / 2.5;
 
     let elipseDistance =
         mesh.position.x ** 2 / maxRadiusX ** 2 +

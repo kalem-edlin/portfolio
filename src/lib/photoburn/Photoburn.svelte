@@ -60,7 +60,7 @@
                 requestAnimationFrame(transitionAnimation);
             }
             data.renderer.render(data.scene, data.camera);
-        }, 5);
+        }, 20);
         requestAnimationFrame(transitionAnimation);
     };
 
@@ -97,8 +97,8 @@
             if (scrollY > DRAWABLE_HEIGHT) {
                 if (!startTime) startTime = timestamp;
                 // Catchup to scroll position after finishing the normal "burn" animation if targetProgress is set
-
                 console.log(targetProgress);
+                const posRatio = scrollY / data.renderer.domElement.height;
                 if (data.progress < targetProgress) {
                     data.progress = Math.min(
                         (timestamp - startTime) /
@@ -108,25 +108,30 @@
                     );
                 } else {
                     targetProgress = undefined;
-                    data.progress = Math.min(
-                        scrollY / data.renderer.domElement.height,
-                        1
-                    );
+                    if (posRatio > 1) {
+                        animateStateFunction = undefined;
+                        return;
+                    }
+
+                    data.progress = Math.min(posRatio, 1);
                 }
                 data.foregroundPlane.material.uniforms.u_time.value =
                     data.progress;
                 requestAnimationFrame(scrollAnimation);
             } else {
                 data = PhotoburnHelpers.end(true, data);
-                // startSpeedUp = false; // TODO: This should be removed and bug fixed
+                startSpeedUp = false; // TODO: This should be removed and bug fixed
                 animateStateFunction = undefined;
             }
             data.renderer.render(data.scene, data.camera);
-        }, 15);
+        }, 20);
         requestAnimationFrame(scrollAnimation);
     };
 
-    $: if (scrollY > DRAWABLE_HEIGHT) {
+    $: if (
+        scrollY > DRAWABLE_HEIGHT &&
+        scrollY < data.renderer.domElement.height
+    ) {
         if (animateStateFunction) {
             startSpeedUp = true;
         } else {

@@ -11,11 +11,11 @@
     let y = 0;
     let readyToScroll = false;
 
-    $: floatConsTop = y > window.innerHeight ? window.innerHeight : undefined;
-
-    $: floatConsTop && console.log(floatConsTop);
+    $: floatConsTop =
+        y > window.innerHeight * 1.5 ? window.innerHeight : undefined;
 
     $: showMouseScroll = showMouseScroll && y == 0;
+    $: showMouseWave = showMouseWave && y == 0;
 
     window.addEventListener('scroll', () => {
         if (readyToScroll) {
@@ -59,9 +59,10 @@
 </script>
 
 <main>
-    <div class={`logo_container ${!loading && 'logo_hidden'}`}>
-        <img class="logo" src="logo.gif" alt="kalem edlin logo" />
-    </div>
+    {#if !readyToScroll}
+        <div class={`logo_container ${!loading && 'logo_hidden'}`}>
+            <img class="logo" src="logo.gif" alt="kalem edlin logo" />
+        </div>{/if}
 
     <div
         class={`mouse_wave_container ${
@@ -134,7 +135,7 @@
                         : `position: fixed; top: ;`
                 } z-index: 10; width: 100vw; height: 100vh;`}
             >
-                <Floatcons scrollY={y} />
+                <Floatcons {floatConsTop} scrollY={y} />
             </div>
         {/if}
         <div />
