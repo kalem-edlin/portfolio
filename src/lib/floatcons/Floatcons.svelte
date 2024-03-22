@@ -1,29 +1,25 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import * as THREE from 'three';
-    import { themeStore } from '../../store/Theme';
     import * as Floatcons from './floatconsHelpers';
     import type { Icon, Sizes } from './types';
 
     let sizes: Sizes;
     let icons: Icon[];
-    let filter: string | undefined = undefined;
     let renderer: THREE.WebGLRenderer;
     let camera: THREE.OrthographicCamera;
     let scene: THREE.Scene;
     let wrangling: boolean = false;
-
-    export let scrollY;
-    export let floatConsTop;
+    export let content;
 
     const mouse = new THREE.Vector2(Infinity, Infinity);
 
-    const onFilter = (skillType: string) => {
-        if (!filter || skillType !== filter) {
-            icons = Floatcons.preFilter(icons, skillType);
-            filter = skillType;
+    const onFilter = () => {
+        if (!wrangling) {
+            icons = Floatcons.preFilter(icons);
+            wrangling = true;
         } else {
-            filter = undefined;
+            wrangling = false;
         }
     };
 
@@ -55,15 +51,15 @@
     // }
 
     onMount(() => {
-        ({ renderer, camera, scene, sizes } = Floatcons.setup($themeStore));
+        ({ renderer, camera, scene, sizes } = Floatcons.setup());
 
-        let created = Floatcons.create(sizes, $themeStore);
+        let created = Floatcons.create(sizes, content.customIcons);
         icons = created.icons;
         scene.add(created.group);
 
         const animate = () => {
-            if (filter) {
-                icons = Floatcons.filter(icons, filter, sizes);
+            if (wrangling) {
+                icons = Floatcons.filter(icons, sizes);
             } else {
                 icons = Floatcons.step(icons, mouse, sizes);
             }
@@ -85,22 +81,20 @@
     (scrollY / window.innerHeight / 2) * window.innerWidth
 }px; margin-left: 0%;`} -->
     <div class="container skills-container">
-        <h1>The Kalem Stack</h1>
-        <p>
-            I have spent years curating a personal stack of technology. This is
-            my toolbelt, and with it I feel <span style="font-style: italic;"
-                >fast</span
-            >. The bigger the icon, the more I depend on it!
-        </p>
-        <div>
-            <button
-                class="primary-text"
-                on:click={() => {
-                    wrangling = !wrangling;
-                    onFilter('passion');
-                }}>{wrangling ? 'Release' : 'Wrangle Icons'}</button
-            >
-        </div>
+        {#if !wrangling}
+            <h1>{content.header}</h1>
+            <p>
+                {content.bodyFirst}<span style="font-style: italic;"
+                    >{content.bodyItalic}</span
+                >{content.bodyLast}
+            </p>
+        {/if}
+        <button
+            class="primary-text"
+            on:click={() => {
+                onFilter();
+            }}>{wrangling ? content.release : content.wrangle}</button
+        >
     </div>
 </div>
 

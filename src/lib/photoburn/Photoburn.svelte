@@ -8,6 +8,7 @@
     export let onLoaded;
     export let onReadyToScroll;
     export let onWaved;
+    export let backgroundImages;
 
     const DRAWABLE_HEIGHT = 0;
 
@@ -177,7 +178,7 @@
     onMount(async () => {
         isInitialAnimation = true;
         if (!data) {
-            data = await PhotoburnHelpers.setup();
+            data = await PhotoburnHelpers.setup(backgroundImages);
         }
         await onLoaded();
         scrollY = window.scrollY;
@@ -197,7 +198,11 @@
         scrollY >= data?.renderer.domElement.height / 2 ? 'none' : 'auto'
     }`}
 >
-    <div on:mousemove={onMouseMove} id="photoburn-canvas" />
+    {#if screen.orientation}
+        <div on:mousemove={onMouseMove} id="photoburn-canvas" />
+    {:else}
+        <div on:touchstart={onMouseMove} id="photoburn-canvas" />
+    {/if}
 </div>
 
 <style>

@@ -17,7 +17,9 @@ export const IMAGE_ASPECT_RATIO = 1.797; // The image aspect ratio for all "burn
 let geometry;
 
 // Setup the THREE js canvas and initialize all geometries with their respective textures
-export const setup = async (): Promise<PhotoburnData> => {
+export const setup = async (
+    backgroundImages: string[]
+): Promise<PhotoburnData> => {
     const container = document.getElementById('photoburn-canvas');
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -33,7 +35,9 @@ export const setup = async (): Promise<PhotoburnData> => {
 
     let textureLoader = new THREE.TextureLoader();
 
-    const imagePromises: Promise<THREE.Texture>[] = IMAGES.map((url) => {
+    const imagePromises: Promise<THREE.Texture>[] = (
+        backgroundImages ?? IMAGES
+    ).map((url) => {
         return new Promise((resolve) => {
             textureLoader.load(url, resolve);
         });
